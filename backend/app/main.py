@@ -1,31 +1,48 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.database import Base
-from app.database import engine
+from app.database import Base, engine
 
 from app.routers.auth import router as auth_router
 from app.routers.patient import router as patient_router
-from app.routers import document
-from fastapi.staticfiles import StaticFiles
-from app.routers import doctor
-from app.routers import consultation
-from app.routers import prescription
-from app.routers import appointment
-from app.routers import clinical_note
+from app.routers import (
+    document,
+    doctor,
+    consultation,
+    prescription,
+    appointment,
+    clinical_note,
+    doctor_availability,
+    chatbot,
+)
+
 from app.models.doctor_availability import DoctorAvailability
-from app.routers import doctor_availability
-from app.routers import chatbot
+
 
 Base.metadata.create_all(bind=engine)
 
+
 app = FastAPI(
-    title="Electronic Medical Record API"
+    title="Electronic Medical Record API",
 )
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.mount(
     "/uploads",
     StaticFiles(directory="uploads"),
     name="uploads",
 )
+
 
 app.include_router(auth_router)
 app.include_router(patient_router)
