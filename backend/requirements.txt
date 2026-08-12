@@ -8,6 +8,5 @@ python-dotenv
 python-multipart
 python-jose
 passlib
-email-validator
 supabase
 requests
