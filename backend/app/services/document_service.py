@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
@@ -7,8 +8,9 @@ from sqlalchemy.orm import Session
 from app.models.document import Document
 from app.models.patient import Patient
 
-UPLOAD_FOLDER = "uploads/documents"
+logger = logging.getLogger(__name__)
 
+UPLOAD_FOLDER = "uploads/documents"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -18,67 +20,59 @@ def upload_document(
     title: str,
     file: UploadFile,
 ):
-    patient = db.query(Patient).filter(
-        Patient.id == patient_id
-    ).first()
+    try:
+        patient = db.query(Patient).filter(
+            Patient.id == patient_id
+        ).first()
 
-    if not patient:
-        raise HTTPException(
-            status_code=404,
-            detail="Patient not found"
+        if not patient:
+            raise HTTPException(
+                status_code=404,
+                detail="Patient not found",
+            )
+
+        if not file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail="No filename provided",
+            )
+
+        file_path = os.path.join(
+            UPLOAD_FOLDER,
+            file.filename,
         )
 
-    file_path = os.path.join(
-        UPLOAD_FOLDER,
-        file.filename,
-    )
+        logger.info("Saving uploaded file to: %s", file_path)
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    document = Document(
-    patient_id=patient_id,
-    title=title,
-    file_name=file.filename,
-    file_path=f"http://10.0.2.2:8000/uploads/documents/{file.filename}",
-)
+        logger.info("File saved successfully: %s", file_path)
 
-    db.add(document)
-    db.commit()
-    db.refresh(document)
-
-    return document
-
-
-def get_patient_documents(
-    db: Session,
-    patient_id: int,
-):
-    return db.query(Document).filter(
-        Document.patient_id == patient_id
-    ).all()
-
-
-def delete_document(
-    db: Session,
-    document_id: int,
-):
-    document = db.query(Document).filter(
-        Document.id == document_id
-    ).first()
-
-    if not document:
-        raise HTTPException(
-            status_code=404,
-            detail="Document not found"
+        document = Document(
+            patient_id=patient_id,
+            title=title,
+            file_name=file.filename,
+            file_path=f"/uploads/documents/{file.filename}",
         )
 
-    if os.path.exists(document.file_path):
-        os.remove(document.file_path)
+        db.add(document)
+        db.commit()
+        db.refresh(document)
 
-    db.delete(document)
-    db.commit()
+        logger.info("Document created: %s", document.id)
 
-    return {
-        "message": "Document deleted"
-    }
+        return document
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        db.rollback()
+
+        logger.exception("DOCUMENT UPLOAD FAILED")
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document upload failed: {str(e)}",
+        )

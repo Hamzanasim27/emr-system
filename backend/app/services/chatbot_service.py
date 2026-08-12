@@ -9,7 +9,7 @@ URL = "https://openrouter.ai/api/v1/chat/completions"
 def ask_chatbot(message: str):
 
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost",
         "X-Title": "EMR System",
@@ -43,9 +43,13 @@ def ask_chatbot(message: str):
         URL,
         headers=headers,
         json=payload,
+        timeout=60,
     )
 
     if response.status_code != 200:
+        print("OpenRouter error:", response.status_code)
+        print(response.text)
+
         return {
             "reply": "Sorry, I couldn't contact the AI service."
         }

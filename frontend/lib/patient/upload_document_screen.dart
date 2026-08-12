@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/document.dart';
 import '../../services/document_service.dart';
+import '../core/api/endpoints.dart';
 
 class DocumentScreen extends StatefulWidget {
   const DocumentScreen({super.key});
@@ -24,7 +25,38 @@ class _DocumentScreenState extends State<DocumentScreen> {
 
   Future<void> load() async {
     documents = await service.getDocuments();
-    setState(() {});
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> openDocument(MedicalDocument document) async {
+    String url = document.filePath.replaceAll("\\", "/");
+
+    if (url.contains("10.0.2.2:8000")) {
+      url = url.replaceFirst(
+        "http://10.0.2.2:8000",
+        Endpoints.baseUrl,
+      );
+    } else if (!url.startsWith("http")) {
+      url = "${Endpoints.baseUrl}/$url";
+    }
+
+    final uri = Uri.parse(url);
+
+    final success = await launchUrl(
+      uri,
+      mode: LaunchMode.inAppBrowserView,
+    );
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Could not open the document"),
+        ),
+      );
+    }
   }
 
   @override
@@ -33,7 +65,11 @@ class _DocumentScreenState extends State<DocumentScreen> {
       appBar: AppBar(
         title: const Text("Medical Documents"),
       ),
-      body: ListView.builder(
+      body: documents.isEmpty
+          ? const Center(
+        child: Text("No medical documents found"),
+      )
+          : ListView.builder(
         itemCount: documents.length,
         itemBuilder: (_, index) {
           final document = documents[index];
@@ -44,18 +80,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
               title: Text(document.title),
               subtitle: Text(document.fileName),
               trailing: const Icon(Icons.open_in_new),
-              onTap: () async {
-                final uri = Uri.parse(
-                  "http://10.0.2.2:8000/uploads/documents/report.pdf",
-                );
-
-                final success = await launchUrl(
-                  uri,
-                  mode: LaunchMode.inAppBrowserView,
-                );
-
-                print("Opened: $success");
-              },
+              onTap: () => openDocument(document),
             ),
           );
         },
@@ -64,7 +89,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
         child: const Icon(Icons.upload),
         onPressed: () async {
           await service.upload();
-          load();
+          await load();
         },
       ),
     );

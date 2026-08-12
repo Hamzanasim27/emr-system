@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/document.dart';
 import '../services/document_service.dart';
+import '../core/api/endpoints.dart';
 
 class DoctorDocumentScreen extends StatefulWidget {
   final int patientId;
@@ -19,7 +20,6 @@ class DoctorDocumentScreen extends StatefulWidget {
 
 class _DoctorDocumentScreenState
     extends State<DoctorDocumentScreen> {
-
   final service = DocumentService();
 
   List<MedicalDocument> documents = [];
@@ -34,7 +34,40 @@ class _DoctorDocumentScreenState
     documents = await service.getPatientDocuments(
       widget.patientId,
     );
-    setState(() {});
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> openDocument(MedicalDocument document) async {
+    String url = document.filePath.replaceAll("\\", "/");
+
+    if (url.contains("10.0.2.2:8000")) {
+      url = url.replaceFirst(
+        "http://10.0.2.2:8000",
+        Endpoints.baseUrl,
+      );
+    } else if (!url.startsWith("http")) {
+      url = "${Endpoints.baseUrl}$url";
+    }
+
+    debugPrint("Opening document: $url");
+
+    final uri = Uri.parse(url);
+
+    final success = await launchUrl(
+      uri,
+      mode: LaunchMode.inAppBrowserView,
+    );
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Could not open document"),
+        ),
+      );
+    }
   }
 
   @override
@@ -43,7 +76,11 @@ class _DoctorDocumentScreenState
       appBar: AppBar(
         title: const Text("Medical Documents"),
       ),
-      body: ListView.builder(
+      body: documents.isEmpty
+          ? const Center(
+        child: Text("No medical documents found"),
+      )
+          : ListView.builder(
         itemCount: documents.length,
         itemBuilder: (_, index) {
           final document = documents[index];
@@ -54,31 +91,7 @@ class _DoctorDocumentScreenState
               title: Text(document.title),
               subtitle: Text(document.fileName),
               trailing: const Icon(Icons.open_in_new),
-              onTap: () async {
-                print(document.filePath);
-
-                String url = document.filePath;
-
-                if (!url.startsWith("http")) {
-                  url = "http://10.0.2.2:8000/${url.replaceAll("\\", "/")}";
-                }
-
-                print(url);
-
-                final uri = Uri.parse(url);
-
-                await launchUrl(
-                  uri,
-                  mode: LaunchMode.inAppBrowserView,
-                );
-
-                final success = await launchUrl(
-                  uri,
-                  mode: LaunchMode.inAppBrowserView,
-                );
-
-                print(success);
-              },
+              onTap: () => openDocument(document),
             ),
           );
         },
