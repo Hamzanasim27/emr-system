@@ -27,8 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await auth.register(
-        fullName: name.text.trim(),
-        email: email.text.trim(),
+        fullName: name.text,
+        email: email.text,
         password: password.text,
         role: role,
       );
@@ -37,18 +37,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       Navigator.pop(context);
     } catch (e) {
-      if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-        ),
+        SnackBar(content: Text(e.toString())),
       );
-
-      setState(() {
-        loading = false;
-      });
     }
+
+    setState(() {
+      loading = false;
+    });
   }
 
   Widget field(
@@ -70,32 +66,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
-  void dispose() {
-    name.dispose();
-    email.dispose();
-    password.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Register"),
-      ),
+      appBar: AppBar(title: const Text("Register")),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: ListView(
           children: [
             field("Full Name", name),
             field("Email", email),
-            field(
-              "Password",
-              password,
-              obscure: true,
-            ),
+            field("Password", password, obscure: true),
+
             DropdownButtonFormField<String>(
-              initialValue: role,
+              value: role,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: "Role",
@@ -110,29 +93,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Text("Doctor"),
                 ),
               ],
-              onChanged: loading
-                  ? null
-                  : (value) {
-                if (value == null) return;
-
-                setState(() {
-                  role = value;
-                });
+              onChanged: (value) {
+                role = value!;
               },
             ),
+
             const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: loading ? null : register,
-              child: loading
-                  ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-                  : const Text("Register"),
+              child: const Text("Register"),
             ),
           ],
         ),
