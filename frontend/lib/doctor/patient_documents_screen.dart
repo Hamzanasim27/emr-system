@@ -31,42 +31,115 @@ class _DoctorDocumentScreenState
   }
 
   Future<void> load() async {
-    documents = await service.getPatientDocuments(
-      widget.patientId,
-    );
+    try {
+      final result = await service.getPatientDocuments(
+        widget.patientId,
+      );
 
-    if (mounted) {
-      setState(() {});
+      if (mounted) {
+        setState(() {
+          documents = result;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading documents: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Could not load documents"),
+          ),
+        );
+      }
     }
   }
 
-  Future<void> openDocument(MedicalDocument document) async {
-    String url = document.filePath.replaceAll("\\", "/");
+  String getDocumentUrl(String filePath) {
+    // Convert Windows backslashes to normal URL slashes
+    String url = filePath.replaceAll("\\", "/").trim();
 
+    // If backend already returned a full Render URL,
+    // use it directly.
+    if (url.startsWith(Endpoints.baseUrl)) {
+      return url;
+    }
+
+    // Convert old local Android emulator URL
     if (url.contains("10.0.2.2:8000")) {
       url = url.replaceFirst(
         "http://10.0.2.2:8000",
         Endpoints.baseUrl,
       );
-    } else if (!url.startsWith("http")) {
-      url = "${Endpoints.baseUrl}$url";
+
+      return url;
     }
+
+    // If backend returned another localhost URL,
+    // replace it with Render.
+    if (url.contains("localhost:8000")) {
+      url = url.replaceFirst(
+        "http://localhost:8000",
+        Endpoints.baseUrl,
+      );
+
+      return url;
+    }
+
+    // If backend returned a relative path such as:
+    // /uploads/documents/report.pdf
+    if (!url.startsWith("http://") &&
+        !url.startsWith("https://")) {
+      if (!url.startsWith("/")) {
+        url = "/$url";
+      }
+
+      return "${Endpoints.baseUrl}$url";
+    }
+
+    return url;
+  }
+
+  Future<void> openDocument(MedicalDocument document) async {
+    final url = getDocumentUrl(document.filePath);
 
     debugPrint("Opening document: $url");
 
-    final uri = Uri.parse(url);
+    final uri = Uri.tryParse(url);
 
-    final success = await launchUrl(
-      uri,
-      mode: LaunchMode.inAppBrowserView,
-    );
+    if (uri == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invalid document URL"),
+          ),
+        );
+      }
+      return;
+    }
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Could not open document"),
-        ),
+    try {
+      final success = await launchUrl(
+        uri,
+        mode: LaunchMode.platformDefault,
       );
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Could not open the document"),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error opening document: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Could not open the document"),
+          ),
+        );
+      }
     }
   }
 
@@ -87,10 +160,14 @@ class _DoctorDocumentScreenState
 
           return Card(
             child: ListTile(
-              leading: const Icon(Icons.picture_as_pdf),
+              leading: const Icon(
+                Icons.picture_as_pdf,
+              ),
               title: Text(document.title),
               subtitle: Text(document.fileName),
-              trailing: const Icon(Icons.open_in_new),
+              trailing: const Icon(
+                Icons.open_in_new,
+              ),
               onTap: () => openDocument(document),
             ),
           );

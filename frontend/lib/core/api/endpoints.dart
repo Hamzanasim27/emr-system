@@ -1,5 +1,6 @@
 class Endpoints {
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl =
+      "https://emr-system-y652.onrender.com";
 
   static const String login = "/auth/login";
   static const String register = "/auth/register";
@@ -8,6 +9,6 @@ class Endpoints {
   static const String prescriptions = "/prescriptions";
   static const String clinicalNotes = "/clinical-notes";
   static const String appointments = "/appointments/";
-  static const String availability = "/availability/"; // <-- change
-  static const doctors = "/doctor/";
+  static const String availability = "/availability/";
+  static const String doctors = "/doctor/";
 }
