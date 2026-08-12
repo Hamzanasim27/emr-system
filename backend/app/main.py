@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -26,6 +28,9 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Electronic Medical Record API",
 )
+
+
+os.makedirs("uploads/documents", exist_ok=True)
 
 
 app.add_middleware(
