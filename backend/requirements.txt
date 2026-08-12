@@ -10,3 +10,4 @@ python-jose
 passlib
 supabase
 requests
+email-validator==2.3.0
