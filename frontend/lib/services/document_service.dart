@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -32,33 +30,27 @@ class DocumentService {
   }
 
   Future<void> upload() async {
-    FilePickerResult? result =
-    await FilePicker.platform.pickFiles();
+    final result = await FilePicker.platform.pickFiles(
+      withData: true,
+    );
 
     if (result == null) {
       debugPrint("UPLOAD: No file selected");
       return;
     }
 
-    final filePath = result.files.single.path;
+    final pickedFile = result.files.single;
 
-    if (filePath == null) {
-      debugPrint("UPLOAD: File path is unavailable");
-      return;
+    if (pickedFile.bytes == null) {
+      throw Exception("Could not read selected file");
     }
 
-    final file = File(filePath);
-    final name = result.files.single.name;
-
-    debugPrint("UPLOAD FILE: $name");
-    debugPrint(
-      "UPLOAD API: ${Endpoints.baseUrl}${Endpoints.documents}/",
-    );
+    final name = pickedFile.name;
 
     final form = FormData.fromMap({
       "title": name,
-      "file": await MultipartFile.fromFile(
-        file.path,
+      "file": MultipartFile.fromBytes(
+        pickedFile.bytes!,
         filename: name,
       ),
     });
@@ -69,13 +61,13 @@ class DocumentService {
         data: form,
       );
 
-      debugPrint("UPLOAD SUCCESS: ${response.statusCode}");
+      debugPrint("UPLOAD STATUS: ${response.statusCode}");
       debugPrint("UPLOAD RESPONSE: ${response.data}");
     } on DioException catch (e) {
+      debugPrint("UPLOAD ERROR: ${e.message}");
       debugPrint("UPLOAD STATUS: ${e.response?.statusCode}");
       debugPrint("UPLOAD RESPONSE: ${e.response?.data}");
       debugPrint("UPLOAD URL: ${e.requestOptions.uri}");
-      debugPrint("UPLOAD ERROR: ${e.message}");
 
       rethrow;
     }
