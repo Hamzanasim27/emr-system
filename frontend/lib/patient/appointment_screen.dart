@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import '../core/storage/token_storage.dart';
 import '../models/appointment.dart';
 import '../models/doctor.dart';
-import '../services/appointment_service.dart';
-import '../services/doctor_service.dart';
 import '../models/doctor_availability.dart';
+import '../services/appointment_service.dart';
 import '../services/doctor_availability_service.dart';
+import '../services/doctor_service.dart';
 
 class AppointmentScreen extends StatefulWidget {
   const AppointmentScreen({super.key});
 
   @override
-  State<AppointmentScreen> createState() => _AppointmentScreenState();
+  State<AppointmentScreen> createState() =>
+      _AppointmentScreenState();
 }
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
@@ -31,6 +32,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   DateTime? selectedDate;
 
   bool loading = true;
+  bool booking = false;
 
   @override
   void initState() {
@@ -39,30 +41,69 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   }
 
   Future<void> loadDoctors() async {
-    doctors = await doctorService.getDoctors();
+    try {
+      final loadedDoctors = await doctorService.getDoctors();
 
-    if (doctors.isNotEmpty) {
-      selectedDoctor = doctors.first;
-      await loadAvailability(selectedDoctor!.id);
+      if (!mounted) return;
+
+      doctors = loadedDoctors;
+
+      if (doctors.isNotEmpty) {
+        selectedDoctor = doctors.first;
+
+        await loadAvailability(
+          selectedDoctor!.id,
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to load doctors: $e"),
+        ),
+      );
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
   Future<void> loadAvailability(int doctorId) async {
-    slots = await availabilityService.getAvailability(
-      doctorId,
-    );
+    try {
+      final loadedSlots =
+      await availabilityService.getAvailability(
+        doctorId,
+      );
 
-    if (slots.isNotEmpty) {
-      selectedSlot = slots.first;
-    } else {
-      selectedSlot = null;
+      if (!mounted) return;
+
+      setState(() {
+        slots = loadedSlots;
+        selectedSlot =
+        slots.isNotEmpty ? slots.first : null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        slots = [];
+        selectedSlot = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to load availability: $e"),
+        ),
+      );
     }
-
-    setState(() {});
   }
 
   Future<void> pickDate() async {
@@ -73,6 +114,8 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       lastDate: DateTime(2100),
     );
 
+    if (!mounted) return;
+
     if (date != null) {
       setState(() {
         selectedDate = date;
@@ -81,19 +124,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   }
 
   Future<void> bookAppointment() async {
-    final patientId = await TokenStorage.getPatientId();
-
-    if (patientId == null) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Patient not found"),
-        ),
-      );
-      return;
-    }
-
     if (selectedDoctor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -121,7 +151,29 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       return;
     }
 
+    final patientId = await TokenStorage.getPatientId();
+
+    if (!mounted) return;
+
+    if (patientId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Patient not found"),
+        ),
+      );
+      return;
+    }
+
     final parts = selectedSlot!.startTime.split(":");
+
+    if (parts.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid appointment time"),
+        ),
+      );
+      return;
+    }
 
     final appointmentDate = DateTime(
       selectedDate!.year,
@@ -131,24 +183,49 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       int.parse(parts[1]),
     );
 
-    await appointmentService.bookAppointment(
-      Appointment(
-        patientId: patientId,
-        doctorId: selectedDoctor!.id,
-        appointmentDate: appointmentDate.toIso8601String(),
-        reason: reasonController.text,
-      ),
-    );
+    setState(() {
+      booking = true;
+    });
 
-    if (!mounted) return;
+    try {
+      await appointmentService.bookAppointment(
+        Appointment(
+          patientId: patientId,
+          doctorId: selectedDoctor!.id,
+          appointmentDate:
+          appointmentDate.toIso8601String(),
+          reason: reasonController.text.trim(),
+        ),
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Appointment booked successfully"),
-      ),
-    );
+      if (!mounted) return;
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Appointment booked successfully"),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        booking = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to book appointment: $e"),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    reasonController.dispose();
+    super.dispose();
   }
 
   @override
@@ -167,81 +244,113 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(15),
-        child: Column(
-          children: [
-            DropdownButtonFormField<Doctor>(
-              value: selectedDoctor,
-              decoration: const InputDecoration(
-                labelText: "Select Doctor",
-                border: OutlineInputBorder(),
-              ),
-              items: doctors.map((doctor) {
-                return DropdownMenuItem(
-                  value: doctor,
-                  child: Text(doctor.fullName),
-                );
-              }).toList(),
-              onChanged: (doctor) async {
-                if (doctor == null) return;
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              DropdownButtonFormField<Doctor>(
+                initialValue: selectedDoctor,
+                decoration: const InputDecoration(
+                  labelText: "Select Doctor",
+                  border: OutlineInputBorder(),
+                ),
+                items: doctors.map((doctor) {
+                  return DropdownMenuItem<Doctor>(
+                    value: doctor,
+                    child: Text(doctor.fullName),
+                  );
+                }).toList(),
+                onChanged: booking
+                    ? null
+                    : (doctor) async {
+                  if (doctor == null) return;
 
-                selectedDoctor = doctor;
+                  setState(() {
+                    selectedDoctor = doctor;
+                    slots = [];
+                    selectedSlot = null;
+                  });
 
-                await loadAvailability(doctor.id);
-              },
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: "Reason",
-                border: OutlineInputBorder(),
+                  await loadAvailability(doctor.id);
+                },
               ),
-            ),
-            const SizedBox(height: 15),
-            DropdownButtonFormField<DoctorAvailability>(
-              value: selectedSlot,
-              decoration: const InputDecoration(
-                labelText: "Available Slot",
-                border: OutlineInputBorder(),
+              const SizedBox(height: 15),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                enabled: !booking,
+                decoration: const InputDecoration(
+                  labelText: "Reason",
+                  border: OutlineInputBorder(),
+                ),
               ),
-              items: slots.map((slot) {
-                return DropdownMenuItem(
-                  value: slot,
-                  child: Text(
-                    "${slot.dayOfWeek}   ${slot.startTime} - ${slot.endTime}",
+              const SizedBox(height: 15),
+              DropdownButtonFormField<DoctorAvailability>(
+                initialValue: selectedSlot,
+                decoration: const InputDecoration(
+                  labelText: "Available Slot",
+                  border: OutlineInputBorder(),
+                ),
+                items: slots.map((slot) {
+                  return DropdownMenuItem<
+                      DoctorAvailability>(
+                    value: slot,
+                    child: Text(
+                      "${slot.dayOfWeek}   "
+                          "${slot.startTime} - "
+                          "${slot.endTime}",
+                    ),
+                  );
+                }).toList(),
+                onChanged: booking
+                    ? null
+                    : (value) {
+                  setState(() {
+                    selectedSlot = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 15),
+              ListTile(
+                enabled: !booking,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(
+                    color: Colors.grey,
                   ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedSlot = value;
-                });
-              },
-            ),
-            const SizedBox(height: 15),
-            ListTile(
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                title: Text(
+                  selectedDate == null
+                      ? "Select Appointment Date"
+                      : "${selectedDate!.day}-"
+                      "${selectedDate!.month}-"
+                      "${selectedDate!.year}",
+                ),
+                trailing: const Icon(
+                  Icons.calendar_today,
+                ),
+                onTap: booking ? null : pickDate,
               ),
-              title: Text(
-                selectedDate == null
-                    ? "Select Appointment Date"
-                    : "${selectedDate!.day}-${selectedDate!.month}-${selectedDate!.year}",
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: booking
+                      ? null
+                      : bookAppointment,
+                  child: booking
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text("Book Appointment"),
+                ),
               ),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: pickDate,
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: bookAppointment,
-                child: const Text("Book Appointment"),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
