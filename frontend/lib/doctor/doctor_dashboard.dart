@@ -85,8 +85,7 @@ class DoctorDashboard extends StatelessWidget {
                 context,
                 "notes",
               ),
-              onAppointmentTap: () =>
-                  _openAppointmentRequests(context),
+              onAppointmentTap: () => _openAppointmentRequests(context),
               onAvailabilityTap: () => _openAvailability(context),
               onLogout: () => _logout(context),
             );
@@ -120,8 +119,7 @@ class DoctorDashboard extends StatelessWidget {
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(28),
                         child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _WelcomeSection(),
                             const SizedBox(height: 24),
@@ -132,11 +130,10 @@ class DoctorDashboard extends StatelessWidget {
                                 context,
                                 "consultation",
                               ),
-                              onConsultationTap: () =>
-                                  _openPatients(
-                                    context,
-                                    "consultation",
-                                  ),
+                              onConsultationTap: () => _openPatients(
+                                context,
+                                "consultation",
+                              ),
                               onDocumentsTap: () => _openPatients(
                                 context,
                                 "documents",
@@ -604,7 +601,7 @@ class _DashboardSection extends StatelessWidget {
             color: Color(0xFF172033),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -615,7 +612,7 @@ class _DashboardSection extends StatelessWidget {
                 onTap: onPatientsTap,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: _QuickCard(
                 icon: Icons.medical_information_rounded,
@@ -624,7 +621,7 @@ class _DashboardSection extends StatelessWidget {
                 onTap: onConsultationTap,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: _QuickCard(
                 icon: Icons.folder_copy_rounded,
@@ -655,75 +652,92 @@ class _QuickCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        height: 135,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFFE8ECF2),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: const Color(0xFFF5F9FF),
+        child: Container(
+          height: 92,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x08000000),
-              blurRadius: 8,
-              offset: Offset(0, 3),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFE6EAF0),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F1FC),
-                borderRadius: BorderRadius.circular(11),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
               ),
-              child: Icon(
-                icon,
-                size: 22,
-                color: const Color(0xFF1976D2),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF3FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: const Color(0xFF1976D2),
+                ),
               ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF172033),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF172033),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 1.3,
-                      color: Color(0xFF667085),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF667085),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 14,
-              color: Color(0xFF98A2B3),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7FA),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: Color(0xFF667085),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
