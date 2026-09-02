@@ -50,9 +50,7 @@ def ask_chatbot(message: str):
         print("OpenRouter error:", response.status_code)
         print(response.text)
 
-        return {
-            "reply": "Sorry, I couldn't contact the AI service."
-        }
+        raise Exception("OpenRouter API request failed")
 
     data = response.json()
 
