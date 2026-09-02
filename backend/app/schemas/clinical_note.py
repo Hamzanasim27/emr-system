@@ -17,3 +17,11 @@ class ClinicalNoteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SOAPNoteCreate(BaseModel):
+    patient_id: int
+    doctor_id: int
+    subjective: str
+    objective: str
+    assessment: str
+    plan: str

@@ -8,6 +8,7 @@ from app.database import Base, engine
 
 from app.routers.auth import router as auth_router
 from app.routers.patient import router as patient_router
+from app.routers import soap
 from app.routers import (
     document,
     doctor,
@@ -17,8 +18,8 @@ from app.routers import (
     clinical_note,
     doctor_availability,
     chatbot,
+    soap,
 )
-
 from app.models.doctor_availability import DoctorAvailability
 
 
@@ -59,3 +60,4 @@ app.include_router(clinical_note.router)
 app.include_router(appointment.router)
 app.include_router(doctor_availability.router)
 app.include_router(chatbot.router)
+app.include_router(soap.router)

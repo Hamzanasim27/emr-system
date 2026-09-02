@@ -9,10 +9,19 @@ class ClinicalNote(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    patient_id = Column(Integer, ForeignKey("patients.id"))
+    patient_id = Column(
+        Integer,
+        ForeignKey("patients.id")
+    )
 
-    doctor_id = Column(Integer, ForeignKey("users.id"))
+    doctor_id = Column(
+        Integer,
+        ForeignKey("users.id")
+    )
 
     note = Column(Text, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
