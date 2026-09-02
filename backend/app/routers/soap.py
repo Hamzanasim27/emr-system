@@ -6,7 +6,6 @@ from app.models.consultation import Consultation
 from app.models.clinical_note import ClinicalNote
 from app.services.soap_service import generate_soap_note
 
-
 router = APIRouter(
     prefix="/soap",
     tags=["SOAP Notes"],
@@ -42,7 +41,9 @@ def generate(
         new_note = ClinicalNote(
             patient_id=consultation.patient_id,
             doctor_id=consultation.doctor_id,
+            consultation_id=consultation.id,
             note=soap_note,
+            note_type="soap",
         )
 
         db.add(new_note)
@@ -76,7 +77,10 @@ def get_soap_note(
 ):
     note = (
         db.query(ClinicalNote)
-        .filter(ClinicalNote.id == note_id)
+        .filter(
+            ClinicalNote.id == note_id,
+            ClinicalNote.note_type == "soap",
+        )
         .first()
     )
 
@@ -103,7 +107,10 @@ def delete_soap_note(
 ):
     note = (
         db.query(ClinicalNote)
-        .filter(ClinicalNote.id == note_id)
+        .filter(
+            ClinicalNote.id == note_id,
+            ClinicalNote.note_type == "soap",
+        )
         .first()
     )
 
