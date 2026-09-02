@@ -5,6 +5,7 @@ class Consultation {
   final String diagnosis;
   final String clinicalNotes;
   final String createdAt;
+  final int? soapNoteId;
 
   Consultation({
     this.id,
@@ -13,6 +14,7 @@ class Consultation {
     required this.diagnosis,
     required this.clinicalNotes,
     required this.createdAt,
+    this.soapNoteId,
   });
 
   factory Consultation.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class Consultation {
       diagnosis: json["diagnosis"] ?? "",
       clinicalNotes: json["clinical_notes"] ?? "",
       createdAt: json["created_at"] ?? "",
+      soapNoteId: json["soap_note_id"],
     );
   }
 
