@@ -1,52 +1,59 @@
 import requests
 
-from app.config import settings
+from app.core.config import settings
 
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 def generate_soap_note(diagnosis: str, clinical_notes: str):
 
     prompt = f"""
-You are a medical documentation assistant helping a doctor prepare a SOAP note.
+You are an AI medical documentation assistant.
 
-Create a professional SOAP note using ONLY the information provided below.
+Generate a SOAP note from the consultation information below.
 
-DIAGNOSIS:
-{diagnosis}
-
-CLINICAL NOTES:
-{clinical_notes}
-
-Generate exactly these four sections:
-
-SUBJECTIVE:
-Include patient-reported symptoms, complaints, history, duration, and relevant subjective information if present.
-
-OBJECTIVE:
-Include physical examination findings, vital signs, laboratory results, imaging results, and other objective findings if present.
-
-ASSESSMENT:
-Summarize the documented diagnosis and clinical assessment.
-
-PLAN:
-Include treatment, medications, investigations, follow-up, and medical recommendations ONLY if they are explicitly documented.
+Your task is to create a useful clinical documentation draft.
 
 IMPORTANT RULES:
-1. Never invent medical information.
-2. Never invent symptoms, vital signs, examination findings, test results, medications, or treatment.
-3. Do not create a new diagnosis.
-4. Do not interpret casual phrases as medical instructions.
-5. Phrases such as "take care", "okay", "thanks", or other conversational text are NOT a medical treatment plan.
-6. If there is no actual medical plan, write:
-   "Not provided in the consultation notes."
-7. If information for Subjective or Objective is missing, write:
-   "Not provided in the consultation notes."
-8. The diagnosis can be used in the Assessment section because it is explicitly provided.
-9. The generated SOAP note is a draft and must be reviewed by the doctor.
 
-Return ONLY:
+1. SUBJECTIVE
+- Extract the patient's symptoms, complaints, duration, history, and relevant information from the clinical notes.
+- If symptoms are not explicitly documented, do not invent specific symptoms.
+- You may clearly state that subjective information was not documented.
+
+2. OBJECTIVE
+- Extract any documented vital signs, examination findings, laboratory results,
+  imaging results, or other objective information.
+- Do not invent vital signs, examination findings, laboratory results, or imaging.
+- If objective information is missing, state:
+  "No objective findings were documented."
+
+3. ASSESSMENT
+- Use the diagnosis provided by the doctor.
+- You may write a short clinical assessment based on the documented diagnosis and symptoms.
+- Do not introduce a different diagnosis.
+
+4. PLAN
+- Generate a reasonable clinical plan based on the documented diagnosis and symptoms.
+- The plan may include general management, monitoring, follow-up, and safety advice.
+- Do not invent medications, dosages, laboratory tests, imaging, or procedures that were not documented.
+- If a specific treatment is documented, include it.
+- If no treatment is documented, provide a general recommendation appropriate for the documented condition and clearly make it a suggested plan for doctor review.
+
+5. Do not use meaningless phrases such as:
+- "Take care"
+- "Okay"
+- "Thanks"
+- "Not provided in the consultation notes"
+as a medical treatment plan.
+
+6. Keep the SOAP note concise and professional.
+
+7. This is an AI-generated draft for review by a qualified doctor.
+Do not claim that the AI-generated plan is a confirmed medical order.
+
+Return ONLY the SOAP note using exactly this format:
 
 SUBJECTIVE:
 ...
@@ -59,28 +66,52 @@ ASSESSMENT:
 
 PLAN:
 ...
+
+Diagnosis:
+{diagnosis}
+
+Clinical Notes:
+{clinical_notes}
 """
 
+    headers = {
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost",
+        "X-Title": "EMR System",
+    }
+
+    payload = {
+        "model": "openai/gpt-4.1-mini",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a medical documentation assistant. "
+                    "Generate concise SOAP documentation drafts. "
+                    "Never fabricate patient-specific clinical facts."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        "temperature": 0.4,
+        "max_tokens": 600,
+    }
+
     response = requests.post(
-        OPENROUTER_URL,
-        headers={
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": "openai/gpt-4o-mini",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            "temperature": 0.2,
-        },
+        URL,
+        headers=headers,
+        json=payload,
         timeout=60,
     )
 
-    response.raise_for_status()
+    if response.status_code != 200:
+        print("OpenRouter error:", response.status_code)
+        print(response.text)
+        raise Exception("OpenRouter API request failed")
 
     data = response.json()
 
